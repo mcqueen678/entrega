@@ -1,0 +1,63 @@
+services:
+
+#base de datos
+  db:
+    image: postgres:17-alpine
+    container_name: productos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+#Backend
+  api:
+    build: ./backend
+    container_name: productos-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+#fronted
+
+  web:
+    build: ./frontend
+    container_name: productos-web
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+#administrador de base de datos
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: productos-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@administrador.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+
+volumes:
+  pgdata:
+
